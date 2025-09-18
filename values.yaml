@@ -71,7 +71,7 @@ ingress:
 
 ## Certificate Manager Configuration (ENABLED FOR HTTPS)
 certManager:
-  enabled: true  # Changed from false - HTTPS enabled
+  enabled: false  # Changed from false - HTTPS enabled
   clusterIssuer:
     name: letsencrypt-staging  # Changed from prod to staging for testing
     email: kfiramoyal@gmail.com
