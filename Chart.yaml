@@ -1,0 +1,36 @@
+apiVersion: v2
+name: democrm
+description: A Helm chart for Demo CRM application with MongoDB and SSL
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+
+keywords:
+  - crm
+  - demo
+  - mongodb
+  - nextjs
+
+home: https://github.com/yourusername/democrm-chart
+sources:
+  - https://github.com/yourusername/democrm-chart
+
+maintainers:
+  - name: Your Name
+    email: your.email@example.com
+
+dependencies:
+  - name: mongodb
+    version: "16.5.45"
+    repository: "https://charts.bitnami.com/bitnami"
+    condition: mongodb.enabled
+  
+  - name: cert-manager
+    version: "v1.18.2" 
+    repository: "https://charts.jetstack.io"
+    condition: certManager.enabled
+
+  - name: ingress-nginx
+    version: "4.11.3"
+    repository: "https://kubernetes.github.io/ingress-nginx"
+    condition: ingressNginx.enabled

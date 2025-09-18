@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ include "democrm.fullname" . }}-test"
+  labels:
+    {{- include "democrm.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  restartPolicy: Never
+  containers:
+  - name: wget
+    image: busybox:1.35
+    command: ['wget']
+    args: ['{{ include "democrm.fullname" . }}:{{ .Values.democrm.service.port }}']
+    resources:
+      limits:
+        cpu: 100m
+        memory: 128Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi

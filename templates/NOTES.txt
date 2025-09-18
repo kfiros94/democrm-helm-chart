@@ -1,0 +1,49 @@
+1. Get the application URL by running these commands:
+{{- if .Values.ingress.enabled }}
+{{- range $host := .Values.ingress.hosts }}
+  {{- range .paths }}
+  http{{ if $.Values.ingress.tls }}s{{ end }}://{{ $host.host }}{{ .path }}
+  {{- end }}
+{{- end }}
+{{- else if contains "NodePort" .Values.democrm.service.type }}
+  export NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ include "democrm.fullname" . }})
+  export NODE_IP=$(kubectl get nodes --namespace {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
+  echo http://$NODE_IP:$NODE_PORT
+{{- else if contains "LoadBalancer" .Values.democrm.service.type }}
+     NOTE: It may take a few minutes for the LoadBalancer IP to be available.
+           You can watch the status of by running 'kubectl get --namespace {{ .Release.Namespace }} svc -w {{ include "democrm.fullname" . }}'
+  export SERVICE_IP=$(kubectl get svc --namespace {{ .Release.Namespace }} {{ include "democrm.fullname" . }} --template "{{"{{ range (index .status.loadBalancer.ingress 0) }}{{.}}{{ end }}"}}")
+  echo http://$SERVICE_IP:{{ .Values.democrm.service.port }}
+{{- else if contains "ClusterIP" .Values.democrm.service.type }}
+  export POD_NAME=$(kubectl get pods --namespace {{ .Release.Namespace }} -l "{{ include "democrm.selectorLabels" . }}" -o jsonpath="{.items[0].metadata.name}")
+  export CONTAINER_PORT=$(kubectl get pod --namespace {{ .Release.Namespace }} $POD_NAME -o jsonpath="{.spec.containers[0].ports[0].containerPort}")
+  echo "Visit http://127.0.0.1:8080 to use your application"
+  kubectl --namespace {{ .Release.Namespace }} port-forward $POD_NAME 8080:$CONTAINER_PORT
+{{- end }}
+
+2. Check the status of your deployment:
+   kubectl get pods -l "{{ include "democrm.selectorLabels" . }}"
+
+3. View application logs:
+   kubectl logs -l "{{ include "democrm.selectorLabels" . }}" --tail=100
+
+{{- if .Values.mongodb.enabled }}
+
+4. MongoDB Connection:
+   Your application is configured to connect to MongoDB replica set: {{ .Values.mongodb.replicaSet.name }}
+   
+   To connect to MongoDB directly:
+   export MONGODB_ROOT_PASSWORD=$(kubectl get secret --namespace {{ .Release.Namespace }} {{ .Release.Name }}-mongodb -o jsonpath="{.data.mongodb-root-password}" | base64 -d)
+   kubectl run --namespace {{ .Release.Namespace }} mongodb-client --rm --tty -i --restart='Never' \
+     --env="MONGODB_ROOT_PASSWORD=$MONGODB_ROOT_PASSWORD" \
+     --image docker.io/bitnami/mongodb:8.0.13-debian-12-r0 --command -- \
+     mongosh admin --host "{{ .Release.Name }}-mongodb-0.{{ .Release.Name }}-mongodb-headless.{{ .Release.Namespace }}.svc.cluster.local:27017" \
+     --authenticationDatabase admin -u {{ .Values.mongodb.auth.rootUser }} -p $MONGODB_ROOT_PASSWORD
+{{- end }}
+
+{{- if .Values.certManager.enabled }}
+
+5. SSL Certificate Status:
+   Check your certificate status with:
+   kubectl get certificate {{ (index .Values.ingress.tls 0).secretName }} -n {{ .Release.Namespace }}
+{{- end }}

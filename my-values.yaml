@@ -1,0 +1,141 @@
+# Complete values file for democrm chart
+
+## Global settings
+global:
+  imageRegistry: ""
+
+## Demo CRM Application Configuration
+democrm:
+  # Deployment settings
+  replicaCount: 2
+  
+  # Container image settings
+  image:
+    repository: pwstaging/demo-crm
+    pullPolicy: IfNotPresent
+    tag: "latest"
+
+  # Application configuration
+  config:
+    logLevel: "info"
+    persistence: "true"
+  
+  # Container resources
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 500m
+      memory: 256Mi
+
+  # Health checks
+  livenessProbe:
+    httpGet:
+      path: /
+      port: 3000
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+    
+  readinessProbe:
+    httpGet:
+      path: /
+      port: 3000
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+  # Service configuration
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 3000
+
+## Ingress Configuration
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+  hosts:
+    - host: kfir-cowsay.ddns.net
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: democrm-tls
+      hosts:
+        - kfir-cowsay.ddns.net
+
+## Certificate Manager Configuration
+certManager:
+  enabled: false
+  clusterIssuer:
+    name: letsencrypt-prod
+    email: kfiramoyal@gmail.com
+    server: https://acme-v02.api.letsencrypt.org/directory
+    solvers:
+      - http01:
+          ingress:
+            ingressClassName: nginx
+
+## MongoDB Configuration (Bitnami subchart)
+mongodb:
+  enabled: false
+  auth:
+    enabled: true
+    rootUser: admin
+    rootPassword: password123
+  architecture: replicaset
+  replicaSet:
+    enabled: true
+    name: rs0
+    useHostnames: true
+  replicaCount: 2
+  persistence:
+    enabled: true
+    size: 5Gi
+  service:
+    type: ClusterIP
+    ports:
+      mongodb: 27017
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 250m
+    limits:
+      memory: 512Mi
+      cpu: 500m
+
+## Ingress-Nginx Configuration (subchart) - DISABLED
+ingressNginx:
+  enabled: false
+
+## Security settings
+security:
+  mongodbSecret:
+    create: true
+    name: ""
+
+## Pod Security Context
+podSecurityContext:
+  fsGroup: 2000
+
+## Container Security Context
+securityContext:
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: false
+  runAsNonRoot: true
+  runAsUser: 1000
+
+## Additional configurations
+podAnnotations: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}
