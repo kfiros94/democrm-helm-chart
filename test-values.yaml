@@ -1,0 +1,94 @@
+# Test values - minimal configuration
+nameOverride: ""
+fullnameOverride: ""
+
+## Demo CRM Application Configuration
+democrm:
+  replicaCount: 1  # Reduce for testing
+  
+  image:
+    repository: pwstaging/demo-crm
+    pullPolicy: IfNotPresent
+    tag: "latest"
+
+  config:
+    logLevel: "info"
+    persistence: "true"
+  
+  resources:
+    limits:
+      cpu: 500m      # Reduced for testing
+      memory: 512Mi
+    requests:
+      cpu: 100m      # Reduced for testing
+      memory: 128Mi
+
+  livenessProbe:
+    httpGet:
+      path: /
+      port: 3000
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+    
+  readinessProbe:
+    httpGet:
+      path: /
+      port: 3000
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 3000
+
+## Disable everything for basic testing
+ingress:
+  enabled: false
+
+certManager:
+  enabled: false
+
+communityOperator:
+  enabled: false
+
+ingressNginx:
+  enabled: false
+
+sealedSecrets:
+  enabled: false
+
+## Security settings
+security:
+  mongodbSecret:
+    create: false
+    name: ""
+    useSealed: false
+
+## Service Account
+serviceAccount:
+  create: false
+  name: ""
+
+## Pod Security Context
+podSecurityContext:
+  fsGroup: 2000
+
+## Container Security Context
+securityContext:
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: false
+  runAsNonRoot: true
+  runAsUser: 1000
+
+## Additional configurations
+podAnnotations: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}

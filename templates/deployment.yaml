@@ -53,7 +53,7 @@ spec:
           value: {{ .Values.democrm.config.logLevel | quote }}
         - name: PERSISTENCE
           value: {{ .Values.democrm.config.persistence | quote }}
-        {{- if .Values.mongodb.enabled }}
+        {{- if .Values.communityOperator.enabled }}
         - name: MONGODB_URI
           valueFrom:
             secretKeyRef:

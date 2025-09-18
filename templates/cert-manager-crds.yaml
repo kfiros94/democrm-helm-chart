@@ -1,0 +1,93 @@
+{{- if .Values.certManager.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "democrm.fullname" . }}-cert-manager-crds
+  labels:
+    {{- include "democrm.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-10"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  template:
+    metadata:
+      name: {{ include "democrm.fullname" . }}-cert-manager-crds
+    spec:
+      restartPolicy: OnFailure
+      serviceAccountName: {{ include "democrm.fullname" . }}-crds-installer
+      containers:
+      - name: kubectl
+        image: registry.k8s.io/kubectl:v1.28.0
+        command:
+        - /bin/sh
+        - -c
+        - |
+          echo "Installing cert-manager CRDs..."
+          
+          if kubectl get crd certificates.cert-manager.io 2>/dev/null; then
+            echo "cert-manager CRDs already exist, skipping installation"
+            exit 0
+          fi
+          
+          kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.15.3/cert-manager.crds.yaml
+          
+          echo "Waiting for CRDs to be established..."
+          kubectl wait --for=condition=Established crd/certificates.cert-manager.io --timeout=300s
+          kubectl wait --for=condition=Established crd/clusterissuers.cert-manager.io --timeout=300s
+          kubectl wait --for=condition=Established crd/issuers.cert-manager.io --timeout=300s
+          
+          echo "cert-manager CRDs installation completed"
+        resources:
+          limits:
+            cpu: 100m
+            memory: 128Mi
+          requests:
+            cpu: 50m
+            memory: 64Mi
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "democrm.fullname" . }}-crds-installer
+  labels:
+    {{- include "democrm.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-11"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "democrm.fullname" . }}-crds-installer
+  labels:
+    {{- include "democrm.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-11"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+rules:
+- apiGroups: ["apiextensions.k8s.io"]
+  resources: ["customresourcedefinitions"]
+  verbs: ["get", "list", "create", "update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "democrm.fullname" . }}-crds-installer
+  labels:
+    {{- include "democrm.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-11"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+subjects:
+- kind: ServiceAccount
+  name: {{ include "democrm.fullname" . }}-crds-installer
+  namespace: {{ .Release.Namespace }}
+roleRef:
+  kind: ClusterRole
+  name: {{ include "democrm.fullname" . }}-crds-installer
+  apiGroup: rbac.authorization.k8s.io
+{{- end }}

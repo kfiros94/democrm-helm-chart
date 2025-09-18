@@ -1,98 +1,75 @@
 # Demo CRM Helm Chart
 
+[![Kubernetes](https://img.shields.io/badge/Kubernetes-1.19+-blue.svg)](https://kubernetes.io/)
+[![Helm](https://img.shields.io/badge/Helm-3.0+-blue.svg)](https://helm.sh/)
+[![MongoDB](https://img.shields.io/badge/MongoDB-Community-green.svg)](https://www.mongodb.com/)
+
 A production-ready Helm chart for deploying Demo CRM application with MongoDB replica set and automated SSL certificate management.
 
-## Description
+## Overview
 
 This Helm chart deploys a complete CRM application stack including:
-- Next.js-based Demo CRM application
-- MongoDB replica set for high availability
-- Automated SSL certificate management via cert-manager
-- Nginx Ingress Controller for traffic routing
+- Next.js-based Demo CRM application with high availability (2 replicas)
+- MongoDB replica set for data persistence and fault tolerance
+- Automated SSL certificate management via cert-manager and Let's Encrypt
+- Nginx Ingress Controller for HTTP/HTTPS traffic routing
+- Optional Sealed Secrets for enhanced security
+
+## Architecture
+
+The chart creates a modern, production-ready Kubernetes deployment:
+
+```
+Internet → DNS → Ingress Controller → Ingress → Service → Demo CRM Pods → MongoDB Replica Set
+              ↘                                                            ↗
+               cert-manager (Automated SSL certificates)
+```
+
+### Key Features
+
+- **High Availability**: 2 application replicas with health checks
+- **Database Reliability**: MongoDB 3-node replica set (2 data + 1 arbiter)
+- **Security**: Automated SSL certificates, security contexts, RBAC
+- **Scalability**: Resource management with requests and limits
+- **Production Ready**: Proper labeling, monitoring hooks, and testing
 
 ## Prerequisites
 
 - Kubernetes 1.19+
-- Helm 3.2.0+
+- Helm 3.0+
 - PV provisioner support in the underlying infrastructure
+- DNS domain for SSL certificates (if enabling HTTPS)
 
-## Architecture Overview
-
-```
-Internet → DNS → LoadBalancer → Ingress Controller → Ingress → Service → Deployment → Pods
-                                      ↓
-                              cert-manager (SSL Certs)
-                                      ↓
-                              MongoDB Replica Set (rs0)
-```
-
-### Components
-
-- **Demo CRM Application**: Next.js frontend with 2 replicas for HA
-- **MongoDB**: 3-node replica set (2 data + 1 arbiter) for data persistence
-- **Nginx Ingress Controller**: HTTP/HTTPS traffic routing and load balancing
-- **cert-manager**: Automated SSL certificate management via Let's Encrypt
-- **Persistent Storage**: 5Gi storage per MongoDB data node
-
-## Installation
-
-### Quick Start
+## Quick Start
 
 ```bash
 # Add required Helm repositories
-helm repo add bitnami https://charts.bitnami.com/bitnami
+helm repo add mongodb https://mongodb.github.io/helm-charts
 helm repo add jetstack https://charts.jetstack.io
 helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
 helm repo update
 
-# Install the chart
-helm install my-democrm ./democrm-chart
+# Clone this repository
+git clone https://github.com/kfiros94/democrm-helm-chart.git
+cd democrm-helm-chart
+
+# Install with default values
+helm install my-democrm .
 ```
-
-### Custom Installation
-
-1. Clone this repository:
-   ```bash
-   git clone <repository-url>
-   cd democrm-chart
-   ```
-
-2. Customize values (copy and edit):
-   ```bash
-   cp values.yaml my-values.yaml
-   # Edit my-values.yaml with your specific configuration
-   ```
-
-3. Install with custom values:
-   ```bash
-   helm install my-democrm . -f my-values.yaml
-   ```
-
-4. Update dependencies:
-   ```bash
-   helm dependency update
-   ```
 
 ## Configuration
 
-The following table lists the configurable parameters and their default values.
-
-### Demo CRM Application Parameters
+### Core Application Parameters
 
 | Parameter | Description | Default |
 |-----------|-------------|---------|
 | `democrm.replicaCount` | Number of Demo CRM replicas | `2` |
 | `democrm.image.repository` | Demo CRM image repository | `pwstaging/demo-crm` |
 | `democrm.image.tag` | Demo CRM image tag | `latest` |
-| `democrm.image.pullPolicy` | Image pull policy | `IfNotPresent` |
-| `democrm.config.logLevel` | Application log level | `info` |
-| `democrm.config.persistence` | Enable persistence features | `true` |
 | `democrm.resources.limits.cpu` | CPU resource limits | `1000m` |
 | `democrm.resources.limits.memory` | Memory resource limits | `1Gi` |
-| `democrm.resources.requests.cpu` | CPU resource requests | `500m` |
-| `democrm.resources.requests.memory` | Memory resource requests | `256Mi` |
 
-### Ingress Parameters
+### Ingress Configuration
 
 | Parameter | Description | Default |
 |-----------|-------------|---------|
@@ -101,103 +78,134 @@ The following table lists the configurable parameters and their default values.
 | `ingress.hosts[0].host` | Hostname for the ingress | `kfir-cowsay.ddns.net` |
 | `ingress.tls[0].secretName` | TLS secret name | `democrm-tls` |
 
-### MongoDB Parameters
+### Dependencies
 
 | Parameter | Description | Default |
 |-----------|-------------|---------|
-| `mongodb.enabled` | Enable MongoDB subchart | `true` |
-| `mongodb.auth.enabled` | Enable MongoDB authentication | `true` |
-| `mongodb.auth.rootUser` | MongoDB root username | `admin` |
-| `mongodb.auth.rootPassword` | MongoDB root password | `password123` |
-| `mongodb.architecture` | MongoDB architecture | `replicaset` |
-| `mongodb.replicaCount` | Number of MongoDB replicas | `2` |
-| `mongodb.persistence.enabled` | Enable MongoDB persistence | `true` |
-| `mongodb.persistence.size` | MongoDB PVC size | `5Gi` |
+| `mongodb.enabled` | Enable MongoDB subchart | `false` |
+| `certManager.enabled` | Enable cert-manager subchart | `false` |
+| `ingressNginx.enabled` | Enable ingress-nginx subchart | `false` |
+| `sealedSecrets.enabled` | Enable sealed-secrets subchart | `false` |
 
-### Certificate Manager Parameters
+## Installation Scenarios
 
-| Parameter | Description | Default |
-|-----------|-------------|---------|
-| `certManager.enabled` | Enable cert-manager subchart | `true` |
-| `certManager.clusterIssuer.name` | ClusterIssuer name | `letsencrypt-prod` |
-| `certManager.clusterIssuer.email` | Email for Let's Encrypt | `kfiramoyal@gmail.com` |
+### Scenario 1: Fresh Installation (All Dependencies)
+
+For a completely new cluster:
+
+```bash
+# Enable all dependencies
+helm install my-democrm . \
+  --set mongodb.enabled=true \
+  --set certManager.enabled=true \
+  --set ingressNginx.enabled=true
+```
+
+### Scenario 2: Existing Infrastructure
+
+When you already have MongoDB, cert-manager, and ingress-nginx installed:
+
+```bash
+# Use existing infrastructure
+helm install my-democrm . \
+  --set mongodb.enabled=false \
+  --set certManager.enabled=false \
+  --set ingressNginx.enabled=false
+```
+
+### Scenario 3: Custom Values
+
+```bash
+# Create custom values file
+cat > my-values.yaml << EOF
+democrm:
+  replicaCount: 3
+  resources:
+    limits:
+      cpu: 2000m
+      memory: 2Gi
+      
+ingress:
+  hosts:
+    - host: my-crm.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+
+mongodb:
+  enabled: true
+EOF
+
+# Install with custom values
+helm install my-democrm . -f my-values.yaml
+```
+
+## Bonus Features
+
+### Helm Hooks for CRD Management
+
+The chart includes pre-install hooks for managing cert-manager CRDs:
+
+- Automatic CRD installation before cert-manager deployment
+- Proper resource ordering with hook weights
+- Idempotent installation (won't reinstall existing CRDs)
+
+```bash
+# Enable CRD management hooks
+helm install my-democrm . --set certManager.enabled=true
+```
+
+### Sealed Secrets Integration
+
+For enhanced security, the chart supports Sealed Secrets:
+
+```bash
+# Install kubeseal CLI
+brew install kubeseal
+
+# Generate sealed secret
+./scripts/generate-sealed-secret.sh my-democrm default
+
+# Enable sealed secrets
+helm install my-democrm . \
+  --set sealedSecrets.enabled=true \
+  --set security.mongodbSecret.useSealed=true
+```
 
 ## Testing
 
-### Run Helm Tests
+### Helm Tests
 
 ```bash
-# Run the built-in connectivity test
+# Run connectivity tests
 helm test my-democrm
 ```
 
 ### Manual Testing
 
-1. Check deployment status:
-   ```bash
-   kubectl get pods -l app.kubernetes.io/instance=my-democrm
-   ```
+```bash
+# Check deployment status
+kubectl get pods -l app.kubernetes.io/instance=my-democrm
 
-2. Test application connectivity:
-   ```bash
-   kubectl port-forward svc/my-democrm 8080:80
-   curl http://localhost:8080
-   ```
+# Test application
+kubectl port-forward svc/my-democrm 8080:80
+curl http://localhost:8080
 
-3. Test MongoDB connection:
-   ```bash
-   export MONGODB_ROOT_PASSWORD=$(kubectl get secret my-democrm-mongodb -o jsonpath="{.data.mongodb-root-password}" | base64 -d)
-   kubectl run mongodb-client --rm -i --tty --restart='Never' \
-     --image docker.io/bitnami/mongodb:8.0.13-debian-12-r0 \
-     --env="MONGODB_ROOT_PASSWORD=$MONGODB_ROOT_PASSWORD" \
-     --command -- mongosh admin --host "my-democrm-mongodb-0.my-democrm-mongodb-headless:27017" \
-     --authenticationDatabase admin -u admin -p $MONGODB_ROOT_PASSWORD
-   ```
+# Check MongoDB connection
+kubectl exec -it deployment/my-democrm -- /bin/sh
+# Inside pod: test MongoDB connection
+```
 
-## Troubleshooting
+## Monitoring and Observability
 
-### Common Issues
-
-1. **Pods stuck in Pending state**
-   ```bash
-   kubectl describe pod <pod-name>
-   # Check for resource constraints or PVC issues
-   ```
-
-2. **SSL Certificate not issuing**
-   ```bash
-   kubectl get certificate
-   kubectl describe certificate democrm-tls
-   kubectl get challenges
-   ```
-
-3. **MongoDB connection issues**
-   ```bash
-   kubectl logs -l app.kubernetes.io/name=mongodb
-   kubectl get pods -l app.kubernetes.io/name=mongodb
-   ```
-
-4. **Ingress not working**
-   ```bash
-   kubectl get ingress
-   kubectl describe ingress my-democrm
-   kubectl logs -n ingress-nginx -l app.kubernetes.io/name=ingress-nginx
-   ```
-
-### Debug Commands
+The chart includes proper labeling for monitoring tools:
 
 ```bash
-# Check all resources created by the chart
+# View all resources
 kubectl get all -l app.kubernetes.io/instance=my-democrm
 
-# View application logs
+# Check logs
 kubectl logs -l app.kubernetes.io/name=democrm --tail=100
-
-# Check Helm release status
-helm status my-democrm
-
-# View Helm release values
-helm get values my-democrm
 ```
 
 ## Upgrading
@@ -206,52 +214,98 @@ helm get values my-democrm
 # Update dependencies
 helm dependency update
 
-# Upgrade the release
+# Upgrade release
 helm upgrade my-democrm . -f my-values.yaml
+
+# Rollback if needed
+helm rollback my-democrm 1
 ```
 
 ## Uninstalling
 
 ```bash
-# Uninstall the release
+# Remove the release
 helm uninstall my-democrm
 
-# Clean up PVCs (if needed)
+# Clean up PVCs (if using MongoDB)
 kubectl delete pvc -l app.kubernetes.io/instance=my-democrm
 ```
 
 ## Development
 
-### Linting
+### Linting and Validation
 
 ```bash
+# Lint the chart
 helm lint .
-```
 
-### Template Rendering
-
-```bash
+# Validate templates
 helm template my-democrm . --debug
-```
 
-### Packaging
-
-```bash
+# Package the chart
 helm package .
 ```
 
-## Contributing
+### Contributing
 
 1. Fork the repository
-2. Create a feature branch
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
 3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
+4. Test thoroughly (`helm lint .` and `helm template .`)
+5. Commit your changes (`git commit -m 'Add amazing feature'`)
+6. Push to the branch (`git push origin feature/amazing-feature`)
+7. Open a Pull Request
+
+## Troubleshooting
+
+### Common Issues
+
+**Pods stuck in Pending:**
+```bash
+kubectl describe pod <pod-name>
+# Check for resource constraints or PVC issues
+```
+
+**SSL Certificate not working:**
+```bash
+kubectl get certificate
+kubectl describe certificate democrm-tls
+kubectl get challenges
+```
+
+**MongoDB connection failed:**
+```bash
+kubectl logs -l app.kubernetes.io/name=democrm
+kubectl get pods -l app.kubernetes.io/name=mongodb
+```
+
+### Debug Commands
+
+```bash
+# View Helm release info
+helm status my-democrm
+helm get values my-democrm
+
+# Check all resources
+kubectl get all -l app.kubernetes.io/instance=my-democrm
+
+# View events
+kubectl get events --sort-by=.metadata.creationTimestamp
+```
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Support
 
-For support and questions, please open an issue in the repository or contact the maintainers.
+- 📫 Email: kfiramoyal@gmail.com
+- 🐛 Issues: [GitHub Issues](https://github.com/kfiros94/democrm-helm-chart/issues)
+- 📖 Documentation: This README and inline comments
+
+## Acknowledgments
+
+- [MongoDB Community Helm Charts](https://github.com/mongodb/helm-charts)
+- [cert-manager](https://cert-manager.io/)
+- [NGINX Ingress Controller](https://kubernetes.github.io/ingress-nginx/)
+- [Sealed Secrets](https://sealed-secrets.netlify.app/)

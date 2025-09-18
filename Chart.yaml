@@ -11,22 +11,22 @@ keywords:
   - mongodb
   - nextjs
 
-home: https://github.com/yourusername/democrm-chart
+home: https://github.com/kfiros94/democrm-helm-chart
 sources:
-  - https://github.com/yourusername/democrm-chart
+  - https://github.com/kfiros94/democrm-helm-chart
 
 maintainers:
-  - name: Your Name
-    email: your.email@example.com
+  - name: Kfir Amoyal
+    email: kfiramoyal@gmail.com
 
 dependencies:
-  - name: mongodb
-    version: "16.5.45"
-    repository: "https://charts.bitnami.com/bitnami"
-    condition: mongodb.enabled
-  
+  - name: community-operator
+    repository: "https://mongodb.github.io/helm-charts"
+    version: "0.10.0"
+    condition: communityOperator.enabled
+
   - name: cert-manager
-    version: "v1.18.2" 
+    version: "v1.15.3" 
     repository: "https://charts.jetstack.io"
     condition: certManager.enabled
 
@@ -34,3 +34,8 @@ dependencies:
     version: "4.11.3"
     repository: "https://kubernetes.github.io/ingress-nginx"
     condition: ingressNginx.enabled
+
+  - name: sealed-secrets
+    version: "2.15.3"
+    repository: "https://bitnami-labs.github.io/sealed-secrets"
+    condition: sealedSecrets.enabled

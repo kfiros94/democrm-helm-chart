@@ -51,29 +51,6 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
-Create MongoDB connection string
-*/}}
-{{- define "democrm.mongodbConnectionString" -}}
-{{- if .Values.mongodb.enabled -}}
-{{- $mongodbHost := printf "%s-mongodb-0.%s-mongodb-headless.%s.svc.cluster.local:27017,%s-mongodb-1.%s-mongodb-headless.%s.svc.cluster.local:27017" .Release.Name .Release.Name .Release.Namespace .Release.Name .Release.Name .Release.Namespace -}}
-{{- printf "mongodb://%s:%s@%s/?replicaSet=%s&authSource=admin" .Values.mongodb.auth.rootUser .Values.mongodb.auth.rootPassword $mongodbHost .Values.mongodb.replicaSet.name -}}
-{{- else -}}
-{{- .Values.externalDatabase.connectionString -}}
-{{- end -}}
-{{- end }}
-
-{{/*
-MongoDB secret name
-*/}}
-{{- define "democrm.mongodbSecretName" -}}
-{{- if .Values.security.mongodbSecret.name -}}
-{{- .Values.security.mongodbSecret.name -}}
-{{- else -}}
-{{- printf "%s-mongodb-secret" (include "democrm.fullname" .) -}}
-{{- end -}}
-{{- end }}
-
-{{/*
 Create the name of the service account to use
 */}}
 {{- define "democrm.serviceAccountName" -}}
@@ -81,5 +58,30 @@ Create the name of the service account to use
 {{- default (include "democrm.fullname" .) .Values.serviceAccount.name }}
 {{- else }}
 {{- default "default" .Values.serviceAccount.name }}
+{{- end }}
+{{- end }}
+
+{{/*
+MongoDB secret name
+*/}}
+{{- define "democrm.mongodbSecretName" -}}
+{{- if .Values.security.mongodbSecret.name }}
+{{- .Values.security.mongodbSecret.name }}
+{{- else }}
+{{- printf "%s-mongodb-secret" (include "democrm.fullname" .) }}
+{{- end }}
+{{- end }}
+
+{{/*
+MongoDB connection string
+*/}}
+{{- define "democrm.mongodbConnectionString" -}}
+{{- if .Values.communityOperator.enabled }}
+{{- $mongoName := .Values.communityOperator.mongodb.name }}
+{{- $userName := index .Values.communityOperator.mongodb.users 0 "name" }}
+{{- $dbName := index .Values.communityOperator.mongodb.users 0 "db" }}
+mongodb://{{ $userName }}:password123@{{ $mongoName }}-0.{{ $mongoName }}-svc.{{ .Release.Namespace }}.svc.cluster.local:27017,{{ $mongoName }}-1.{{ $mongoName }}-svc.{{ .Release.Namespace }}.svc.cluster.local:27017/{{ $dbName }}?replicaSet={{ $mongoName }}&authSource={{ $dbName }}
+{{- else }}
+mongodb://localhost:27017/democrm
 {{- end }}
 {{- end }}

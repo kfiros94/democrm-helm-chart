@@ -7,10 +7,12 @@ metadata:
     {{- include "democrm.labels" . | nindent 4 }}
 spec:
   acme:
-    server: {{ .Values.certManager.clusterIssuer.server }}
+    server: https://acme-v02.api.letsencrypt.org/directory
     email: {{ .Values.certManager.clusterIssuer.email }}
     privateKeySecretRef:
-      name: {{ .Values.certManager.clusterIssuer.name }}
+      name: {{ .Values.certManager.clusterIssuer.name }}-private-key
     solvers:
-    {{- toYaml .Values.certManager.clusterIssuer.solvers | nindent 4 }}
+    - http01:
+        ingress:
+          class: nginx
 {{- end }}

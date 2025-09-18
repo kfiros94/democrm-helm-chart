@@ -27,18 +27,18 @@
 3. View application logs:
    kubectl logs -l "{{ include "democrm.selectorLabels" . }}" --tail=100
 
-{{- if .Values.mongodb.enabled }}
+{{- if .Values.communityOperator.enabled }}
 
 4. MongoDB Connection:
-   Your application is configured to connect to MongoDB replica set: {{ .Values.mongodb.replicaSet.name }}
+   Your application is configured to connect to MongoDB replica set: {{ .Values.communityOperator.mongodb.name }}
    
-   To connect to MongoDB directly:
-   export MONGODB_ROOT_PASSWORD=$(kubectl get secret --namespace {{ .Release.Namespace }} {{ .Release.Name }}-mongodb -o jsonpath="{.data.mongodb-root-password}" | base64 -d)
-   kubectl run --namespace {{ .Release.Namespace }} mongodb-client --rm --tty -i --restart='Never' \
-     --env="MONGODB_ROOT_PASSWORD=$MONGODB_ROOT_PASSWORD" \
-     --image docker.io/bitnami/mongodb:8.0.13-debian-12-r0 --command -- \
-     mongosh admin --host "{{ .Release.Name }}-mongodb-0.{{ .Release.Name }}-mongodb-headless.{{ .Release.Namespace }}.svc.cluster.local:27017" \
-     --authenticationDatabase admin -u {{ .Values.mongodb.auth.rootUser }} -p $MONGODB_ROOT_PASSWORD
+   To connect to MongoDB directly, you'll need to get the connection details from the MongoDB Community Operator resources.
+   
+   Check MongoDB status:
+   kubectl get mongodbcommunity {{ .Values.communityOperator.mongodb.name }} -n {{ .Release.Namespace }}
+   
+   Get MongoDB connection secret:
+   kubectl get secret {{ include "democrm.mongodbSecretName" . }} -n {{ .Release.Namespace }} -o yaml
 {{- end }}
 
 {{- if .Values.certManager.enabled }}
