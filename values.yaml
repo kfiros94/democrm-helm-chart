@@ -58,7 +58,7 @@ ingress:
   className: "nginx"
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /
-    cert-manager.io/cluster-issuer: "letsencrypt-staging"  # Changed from prod to staging for testing
+    cert-manager.io/cluster-issuer: "letsencrypt-staging"
   hosts:
     - host: kfir-cowsay.ddns.net
       paths:
@@ -69,21 +69,19 @@ ingress:
       hosts:
         - kfir-cowsay.ddns.net
 
-## Certificate Manager Configuration (ENABLED FOR HTTPS)
+## Certificate Manager Configuration - DISABLED (managed by App-of-Apps)
 certManager:
-  enabled: false  # Changed from false - HTTPS enabled
+  enabled: false
   clusterIssuer:
-    name: letsencrypt-staging  # Changed from prod to staging for testing
+    name: letsencrypt-staging
     email: kfiramoyal@gmail.com
 
-## MongoDB Community Operator Configuration
+## MongoDB Community Operator Configuration - DISABLED (managed by App-of-Apps)
 communityOperator:
-  enabled: false  # Set to true to test
+  enabled: false
   operator:
-    # Operator settings
     watchNamespace: "*"
   
-  # This will be used when we create MongoDB custom resources
   mongodb:
     name: mongodb-replica-set
     members: 2
@@ -109,11 +107,11 @@ communityOperator:
         storage: 5Gi
         storageClass: standard
 
-## Ingress-Nginx Configuration (ENABLED FOR HTTPS)
+## Ingress-Nginx Configuration - DISABLED (managed by App-of-Apps)
 ingressNginx:
-  enabled: true  # Changed from false - HTTPS enabled
+  enabled: false
 
-## Sealed Secrets Configuration
+## Sealed Secrets Configuration - DISABLED (managed by App-of-Apps)
 sealedSecrets:
   enabled: false
   controller:
